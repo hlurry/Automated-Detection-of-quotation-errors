@@ -62,9 +62,6 @@ This repository contains data and code for the paper [Auto Detection of Quotatio
 ```
 
 ## Examples of SHAP
+![figure 1](images/data3.png)
+![figure 2](images/3.png)
 
-![figure 1](images/data1.png)
-![figure 2](images/data2.png)
-![figure 3](images/data3.png)
-![figure 4](images/data4.png)
-![figure 5](images/data5.png)
