@@ -1,0 +1,9 @@
+torch
+transformers
+datasets
+unsloth
+trl
+tensorboard
+numpy
+pandas
+openai

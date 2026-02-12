@@ -1,0 +1,28 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.env/
+.venv/
+venv/
+
+# Logs and outputs
+*.log
+outputs*/
+output*/
+runs/
+t5/summary_task/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# API keys and other secrets
+.env
+config/api_keys.json
+
+# OS files
+.DS_Store
+Thumbs.db
