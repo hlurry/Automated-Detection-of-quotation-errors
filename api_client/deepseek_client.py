@@ -86,18 +86,37 @@ def _parse_run_time(time_input: str):
 
 
 def create_empty_output_file(input_file: str, output_file: str) -> None:
-    """根据输入 jsonl 创建对应的空输出文件。"""
+    """根据输入 jsonl 创建对应的空输出文件。
+
+    约定：
+    - 输入文件中，一条样本通常形如：
+        [system,
+         user_example_1, assistant_example_1,
+         user_example_2, assistant_example_2,
+         user_example_3, assistant_example_3,
+         user_target,     assistant_target]
+    - 我们希望在调用模型时：
+        * 保留 3 个示例的 user / assistant（作为 few-shot 提示）；
+        * 仅将最后一个 assistant 视为“待预测标签”，在输入文件中清空其 content。
+    """
     with open(input_file, "r", encoding="utf-8") as infile:
         input_data = [json.loads(line) for line in infile]
 
     output_data = []
     for item in input_data:
-        new_item = {"messages": []}
-        for msg in item["messages"]:
-            if msg["role"] != "assistant":
-                new_item["messages"].append(msg)
-        new_item["messages"].append({"role": "assistant", "content": ""})
-        output_data.append(new_item)
+        messages = item.get("messages", [])
+        # 复制所有消息，然后仅清空“最后一个 assistant” 的 content，
+        # 这样可以保留前面 few-shot 示例中的 assistant 标签。
+        new_messages = [dict(msg) for msg in messages]
+
+        assistant_indices = [
+            idx for idx, msg in enumerate(new_messages) if msg.get("role") == "assistant"
+        ]
+        if assistant_indices:
+            last_idx = assistant_indices[-1]
+            new_messages[last_idx]["content"] = ""
+
+        output_data.append({"messages": new_messages})
 
     with open(output_file, "w", encoding="utf-8") as outfile:
         for item in output_data:
@@ -134,10 +153,9 @@ def estimate_file(input_file: str, output_file: str, input_files_dict) -> None:
 
     remaining_items = 0
     for item in processed_data:
-        assistant_message = next(
-            (msg for msg in item["messages"] if msg["role"] == "assistant"), None
-        )
-        if not assistant_message or assistant_message["content"] == "":
+        assistant_list = [msg for msg in item["messages"] if msg["role"] == "assistant"]
+        last_assistant = assistant_list[-1] if assistant_list else None
+        if not last_assistant or last_assistant["content"] == "":
             remaining_items += 1
 
     input_files_dict[input_filename] = remaining_items
@@ -178,19 +196,25 @@ def process_file(input_file: str, output_file: str, input_files_dict) -> None:
     processing_times = deque(maxlen=10)
 
     for i, item in enumerate(processed_data):
-        assistant_message = next(
-            (msg for msg in item["messages"] if msg["role"] == "assistant"), None
-        )
-        if assistant_message and assistant_message["content"] != "":
+        assistant_list = [msg for msg in item["messages"] if msg["role"] == "assistant"]
+        last_assistant = assistant_list[-1] if assistant_list else None
+        if last_assistant and last_assistant["content"] != "":
             continue
 
         try:
             start_time = time.time()
-            messages = [msg for msg in item["messages"] if msg["role"] != "assistant"]
+            # 发送给模型的消息：
+            # - 包含 system 和所有 few-shot 示例的 user/assistant；
+            # - 去掉最后一个 assistant（其 content 在 create_empty_output_file 中已被清空）。
+            messages = item["messages"]
+            if messages and messages[-1].get("role") == "assistant":
+                api_messages = messages[:-1]
+            else:
+                api_messages = messages
 
             response = client.chat.completions.create(
                 model=model_id,
-                messages=messages,
+                messages=api_messages,
                 temperature=temperature,
                 max_tokens=1024,
                 logprobs=True,
@@ -219,8 +243,8 @@ def process_file(input_file: str, output_file: str, input_files_dict) -> None:
                 cot = response.choices[0].message.reasoning_content
                 assistant_content = f"{assistant}\n\n思维过程: {cot}"
 
-            if assistant_message:
-                assistant_message["content"] = assistant_content
+            if last_assistant:
+                last_assistant["content"] = assistant_content
             else:
                 item["messages"].append(
                     {
@@ -277,8 +301,8 @@ def process_file(input_file: str, output_file: str, input_files_dict) -> None:
                     error_count = 0
                 else:
                     sys.exit()
-            if assistant_message:
-                assistant_message["content"] = ""
+            if last_assistant:
+                last_assistant["content"] = ""
             else:
                 item["messages"].append({"role": "assistant", "content": ""})
 

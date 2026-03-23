@@ -65,3 +65,51 @@ This repository contains data and code for the paper [Auto Detection of Quotatio
 ![figure 1](images/data3.png)
 ![figure 2](images/3.png)
 
+## API Configuration
+
+API keys are managed via `config/api_keys.json`. Create this file with your credentials:
+
+```json
+{
+  "qwen": {
+    "api_key": "your-qwen-api-key"
+  }
+}
+```
+
+## RAG Usage
+
+### Overview
+
+RAG (Retrieval-Augmented Generation) provides two retrieval methods for claim verification:
+
+- **Hybrid Dense-Sparse Retrieval**: Combines BM25 keyword search with PubMedBERT semantic search using Reciprocal Rank Fusion
+- **HyDE Retrieval**: Uses LLM-generated hypotheses to enhance document retrieval
+
+### Running RAG Inference
+
+```bash
+cd rag
+
+# Run single fold with specific method
+python rag_inference.py --dataset scifact --fold 1 --method hybrid
+python rag_inference.py --dataset scifact --fold 1 --method hyde
+python rag_inference.py --dataset scifact --fold 1 --method both
+
+# Run all folds
+python rag_inference.py --dataset scifact --method both
+
+# Run smith dataset
+python rag_inference.py --dataset smith --fold 1 --method both
+```
+
+### Evaluating RAG Results
+
+```bash
+python evaluate.py
+```
+
+### Output Files
+
+- `output_*.jsonl`: Model predictions
+- `progress_*.json`: Checkpoint files for resume capability

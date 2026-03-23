@@ -23,6 +23,28 @@ t5/summary_task/
 .env
 config/api_keys.json
 
+# RAG数据文件 - 不上传到github
+rag/scifact/scifact_txt/
+rag/scifact/*.jsonl
+rag/scifact/*.json
+rag/smith/smith_txt/
+rag/smith/*.jsonl
+rag/smith/*.json
+
+# dataset目录下的数据文件
+dataset/*.jsonl
+dataset/*.xlsx
+dataset/*.csv
+dataset/**/*.jsonl
+dataset/**/*.xlsx
+dataset/**/*.csv
+dataset/**/*.json
+
+# 其他数据文件
+*.txt
+!README.txt
+!requirements.txt
+
 # OS files
 .DS_Store
 Thumbs.db
